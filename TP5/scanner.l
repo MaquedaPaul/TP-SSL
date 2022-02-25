@@ -1,15 +1,9 @@
 %top{
 	#include <stdio.h>
 	#include "parser.h"	
-}
-
-
-
-%{
 	int erroreslexicos;
-	char mensaje[120];
-%}
-
+	char mensaje[300];
+}
 %option header-file="scanner.h"
 %option outfile="scanner.c"
 %option noinput
@@ -29,10 +23,10 @@ Otros														[[:punct:]]{-}[();,+%\-*/]
 programa 													return PROGRAMA;
 leer														return LEER;
 escribir													return ESCRIBIR;
-fin-programa														    return FDT;
+fin-programa												return FDT;
 entero														return ENTERO;
-{Letra}{Letra_Digito}*									    {yylval = strdup	(yytext); return IDENTIFICADOR;}
-{Digito}+													return CONSTANTE;
+{Letra}{Letra_Digito}*										{yylval = strdup	(yytext); return IDENTIFICADOR;}
+{Digito}+													{yylval = strdup(yytext);return CONSTANTE;}
 "("															return '(';
 ")"															return ')';
 ","															return ',';
@@ -43,7 +37,7 @@ entero														return ENTERO;
 "/"															return '/';
 ";"															return ';';
 {OperadorAsignacion} 										return ASIGNACION;
-{Otros}+													{erroreslexicos++; sprintf(mensaje, "Error léxico: cadena desconocida: %s", yytext)     ; yyerror(mensaje);}
+{Otros}+													{sprintf(mensaje,"Error léxico: cadena desconocida: %s",yytext);yyerror(mensaje);erroreslexicos++;}
 {Letra}{Letra_Digito}*{Otros}+({Letra_Digito}|{Otros})*		{erroreslexicos++; sprintf(mensaje, "Error léxico: identificador inválido: %s", yytext) ; yyerror(mensaje);}
 {Digito}+{Letra}+{Letra_Digito}*							{erroreslexicos++; sprintf(mensaje, "Error léxico: constante inválida: %s", yytext)     ; yyerror(mensaje);}
 {Espacio}+													|

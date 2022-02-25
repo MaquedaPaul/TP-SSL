@@ -1,21 +1,26 @@
 %code top{
 	#include <stdio.h>
 	#include "scanner.h"
+	#include "semantic.h"
+	#include "symbol.h"
 }
 
 %code provides {
 	void yyerror(const char *);
 	extern int erroreslexicos;
 	extern int yynerrs;
+	extern int erroresSemanticos;
 }
-
-%define api.value.type{char *}
 
 %defines "parser.h"					
 %output "parser.c"
 
-%start programa
+
+%define api.value.type{char *}
 %define parse.error verbose
+
+%start programa
+
 
 %token FDT PROGRAMA LEER ENTERO ESCRIBIR IDENTIFICADOR CONSTANTE
 %token ASIGNACION "<<"
@@ -26,51 +31,53 @@
 %precedence NEG
 
 %%
-programa :				PROGRAMA IDENTIFICADOR listaSentencias FDT			{if (yynerrs || erroreslexicos) YYABORT;}
+programa :				 PROGRAMA IDENTIFICADOR {comenzar($2);} listaSentencias FDT {terminar();}				{if (yynerrs || erroreslexicos || erroresSemanticos) YYABORT; else YYACCEPT;}
 					;
 
-listaSentencias :		sentencia 
+listaSentencias :		%empty
 					| 	sentencia listaSentencias
 					;
 
 sentencia :				                            
 
-						ENTERO IDENTIFICADOR';'				        {printf("entero %s\n", $IDENTIFICADOR);}
-					|	IDENTIFICADOR ASIGNACION expresion';'		{printf("asignación \n");}
-                    |	ESCRIBIR'('listaExpresiones')'';'			{printf("escribir\n");} 
-					|   LEER'('listaIdentificadores')'';'	        {printf("leer\n");} 
+						ENTERO IDENTIFICADOR';'				        {if (declararEntero($2,4)) YYERROR;}
+					|	identificador "<<"expresion';'		{asignar($3,$1);}
+                    |	ESCRIBIR'('listaExpresiones')'';'			
+					|   LEER'('listaIdentificadores')'';'	        
                     |   error ';'
 					;
 
-listaExpresiones :		expresion
-				    | 	expresion','listaExpresiones
+listaExpresiones :		expresion {escribir($1);}
+				    | 	listaExpresiones','expresion {escribir($3);}
 					;
 
-listaIdentificadores :	IDENTIFICADOR 								
-					| 	IDENTIFICADOR','listaIdentificadores
+listaIdentificadores :	identificador 	{leer($1);}							
+					| 	listaIdentificadores','identificador {leer($3);}
 					;
 
 
 						
 expresion:			  	valor
-			        | 	'-'valor %prec NEG							{printf("inversion\n");}
-                   	| 	'('expresion')' 							{printf("paréntesis\n");}
-                    | 	expresion '+' expresion 					{printf("suma\n");}
-                  	| 	expresion '-' expresion 					{printf("resta\n");}
-                   	| 	expresion '*' expresion 					{printf("multiplicación\n");}
-                  	| 	expresion '/' expresion 					{printf("division\n");}
-                    |   expresion '%' expresion                     {printf("modulo\n");}
+			        | 	'-'valor %prec NEG							{$$ = genUnario($2);}
+                   	| 	'('expresion')' 							{$$ = $2;}
+                    | 	expresion '+' expresion 					{$$ = genInfijo($1, '+', $3);}
+                  	| 	expresion '-' expresion 					{$$ = genInfijo($1, '-', $3);}
+                   	| 	expresion '*' expresion 					{$$ = genInfijo($1, '*', $3);}
+                  	| 	expresion '/' expresion 					{$$ = genInfijo($1, '/', $3);}
+                    |   expresion '%' expresion                     {$$ = genInfijo($1, '%', $3);}
 					;
                         
-valor :					IDENTIFICADOR
+valor :					identificador
 					|	CONSTANTE
 					;
+identificador			: IDENTIFICADOR										{if(procesarID($1)) YYERROR;}
+						;
 %%
 
 int erroreslexicos = 0;
 
-void yyerror(const char *s){
-		printf("línea #%d  %s\n", yylineno, s);
+void yyerror(const char *mensaje){
+		printf("línea #%d  %s\n", yylineno, mensaje);
 }
 
 

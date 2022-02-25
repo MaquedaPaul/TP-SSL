@@ -24,7 +24,7 @@ int main(void)
         printf("\nNo hay memoria suficiente");
         break;
     }
-    printf("\nErrores sintacticos:  %d - Errores lexicos:  %d\n", yynerrs, erroreslexicos);
+    printf("\nErrores sintacticos:  %d - Errores lexicos:  %d\n - Errores Semanticos: %d\n", yynerrs, erroreslexicos, erroresSemanticos);
 
     return 0;
 }
